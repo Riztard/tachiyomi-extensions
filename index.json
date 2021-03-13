@@ -1,11 +1,11 @@
 [
   {
-    "name": "Tachiyomi: MangaDex ALL",
+    "name": "Tachiyomi: MangaDex + EN",
     "pkg": "eu.kanade.tachiyomi.extension.all.mangadexall",
-    "apk": "tachiyomi-all.mangadexall-v1.2.1.apk",
+    "apk": "tachiyomi-all.mangadexall-v1.2.2.apk",
     "lang": "all",
-    "code": 1,
-    "version": "1.2.1",
+    "code": 2,
+    "version": "1.2.2",
     "nsfw": 1
   },
   {
