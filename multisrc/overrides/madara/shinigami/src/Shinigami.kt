@@ -38,6 +38,7 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
                 if (userAgent.isNullOrBlank() && checkedUa.not()) {
                     val uaResponse = chain.proceed(GET(tachiUaUrl))
                     if (uaResponse.isSuccessful) {
+                        val parseTachiUa = uaResponse.use { json.decodeFromString<TachiUaResponse>(it.body.string()) }
 
                         var listUserAgentString = parseTachiUa.desktop + parseTachiUa.mobile
 
@@ -76,6 +77,11 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         }
     }
 
+    @Serializable
+    data class TachiUaResponse(
+        val desktop: List<String> = emptyList(),
+        val mobile: List<String> = emptyList(),
+    )
 
     // disable random ua in ext setting from multisrc (.setRandomUserAgent)
     override val client: OkHttpClient = network.cloudflareClient.newBuilder()
