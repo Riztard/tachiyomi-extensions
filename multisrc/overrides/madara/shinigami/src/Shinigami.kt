@@ -27,8 +27,7 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
 
     private val tachiUaUrl = Base64.decode(encodedString.replace("DoA", "BoA").replace("GoAhAntU", "GoA").replace("BlyAt", "BlA").replace("BcA", "BzA"), Base64.DEFAULT).toString(Charsets.UTF_32).replace("z", "s")
 
-    private var secChMobile: String? = null
-    private var secChPlatform: String? = null
+    private var secChUaMP: List<String>? = null
     private var userAgent: String? = null
     private var checkedUa = false
 
@@ -54,18 +53,16 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
                 }
 
                 if (userAgent.isNullOrBlank().not()) {
-                    if (userAgent!!.contains("Windows")) {
-                        secChMobile = "?0"
-                        secChPlatform = "Windows"
+                    secChUaMP = if (userAgent!!.contains("Windows")) {
+                        listOf("?0", "Windows")
                     } else {
-                        secChMobile = "?1"
-                        secChPlatform = "Android"
+                        listOf("?1", "Android")
                     }
 
                     val newRequest = chain.request().newBuilder()
                         .header("User-Agent", userAgent!!.trim())
-                        .header("sec-ch-ua-mobile", secChMobile!!)
-                        .header("sec-ch-ua-platform", secChPlatform!!)
+                        .header("sec-ch-ua-mobile", secChUaMP!![0])
+                        .header("sec-ch-ua-platform", secChUaMP!![1])
                         .build()
 
                     return chain.proceed(newRequest)
@@ -98,7 +95,6 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         .add("Sec-Fetch-Mode", "navigate")
         .add("Sec-Fetch-Site", "same-origin")
         .add("Upgrade-Insecure-Requests", "1")
-        .add("X-Requested-With", "")
 
     override val mangaSubString = "semua-series"
 
