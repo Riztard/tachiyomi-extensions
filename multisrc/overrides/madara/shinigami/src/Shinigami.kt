@@ -61,8 +61,8 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
 
                     val newRequest = chain.request().newBuilder()
                         .header("User-Agent", userAgent!!.trim())
-                        .header("sec-ch-ua-mobile", secChUaMP!![0])
-                        .header("sec-ch-ua-platform", secChUaMP!![1])
+                        .header("Sec-CH-UA-Mobile", secChUaMP!![0])
+                        .header("Sec-CH-UA-Platform", secChUaMP!![1])
                         .build()
 
                     return chain.proceed(newRequest)
