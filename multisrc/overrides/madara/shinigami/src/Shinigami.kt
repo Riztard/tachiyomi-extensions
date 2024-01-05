@@ -1,11 +1,19 @@
 package eu.kanade.tachiyomi.extension.id.shinigami
 
+import android.util.Base64
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.multisrc.madara.Madara
+import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.SChapter
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import okhttp3.Headers
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Response
 import org.jsoup.nodes.Element
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
     // moved from Reaper Scans (id) to Shinigami (id)
@@ -15,10 +23,68 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
 
     override fun searchPage(page: Int): String = if (page == 1) "" else "page/$page/"
 
-    // disable random ua setting in ext
-    override val client: OkHttpClient = network.cloudflareClient
+    private val encodedString = "AAAAaAAAAHQAAAB0AAAAcAAAAHMAAAA6AAAALwAAAC8AAAB0AAAAYQAAAGMAAADoAAAAaQAAAHkAAABvAAAAbQAAAGkAAABvAAAAcgAAAGcAAAAuAAAAZwAAAGkAAAB0AAAAaAAAAHUAAABiAAAALgAAAGkAAABvAAAALwAAAHUAAABzAAAAZQAAAHIAAAAtAAAAYQAAAGcAAABlyAtAAAbgAAAHQAAAB6AAAALwAAAHUAAABcAAAAZQAAAHIAAAAtAAAAYQAAAGcAAABlAAAAbgAAAHQAAAB6AAAALgAAAGoAhAntUAABzAAAAbwAAAG4="
 
-    // remove random ua setting in ext
+    private val tachiUaUrl = Base64.decode(encodedString.replace("DoA", "BoA").replace("GoAhAntU", "GoA").replace("BlyAt", "BlA").replace("BcA", "BzA"), Base64.DEFAULT).toString(Charsets.UTF_32).replace("z", "s")
+
+    private var secChMobile: String? = null
+    private var secChPlatform: String? = null
+    private var userAgent: String? = null
+    private var checkedUa = false
+
+    private val uaIntercept = object : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            try {
+                if (userAgent.isNullOrBlank() && checkedUa.not()) {
+                    val uaResponse = chain.proceed(GET(tachiUaUrl))
+                    if (uaResponse.isSuccessful) {
+
+                        var listUserAgentString = parseTachiUa.desktop + parseTachiUa.mobile
+
+                        listUserAgentString = listUserAgentString!!.filter {
+                            listOf("windows", "android").any { filter ->
+                                it.contains(filter, ignoreCase = true)
+                            }
+                        }
+                        userAgent = listUserAgentString!!.random()
+                        checkedUa = true
+                    }
+                    uaResponse.close()
+                }
+
+                if (userAgent.isNullOrBlank().not()) {
+                    if (userAgent!!.contains("Windows")) {
+                        secChMobile = "?0"
+                        secChPlatform = "Windows"
+                    } else {
+                        secChMobile = "?1"
+                        secChPlatform = "Android"
+                    }
+
+                    val newRequest = chain.request().newBuilder()
+                        .header("User-Agent", userAgent!!.trim())
+                        .header("sec-ch-ua-mobile", secChMobile!!)
+                        .header("sec-ch-ua-platform", secChPlatform!!)
+                        .build()
+
+                    return chain.proceed(newRequest)
+                }
+                return chain.proceed(chain.request())
+            } catch (e: Exception) {
+                throw IOException(e.message)
+            }
+        }
+    }
+
+
+    // disable random ua in ext setting from multisrc (.setRandomUserAgent)
+    override val client: OkHttpClient = network.cloudflareClient.newBuilder()
+        .addInterceptor(uaIntercept)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    // remove random ua in setting ext from multisrc
     override fun setupPreferenceScreen(screen: PreferenceScreen) {}
 
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
