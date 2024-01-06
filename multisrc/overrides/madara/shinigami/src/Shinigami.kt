@@ -25,9 +25,9 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
 
     override fun searchPage(page: Int): String = if (page == 1) "" else "page/$page/"
 
-    private val encodedString = "AAAAaAAAAHQAAAB0AAAAcAAAAHMAAAA6AAAALwAAAC8AAAB0AAAAYQAAAGMAAADoAAAAaQAAAHkAAABvAAAAbQAAAGkAAABvAAAAcgAAAGcAAAAuAAAAZwAAAGkAAAB0AAAAaAAAAHUAAABiAAAALgAAAGkAAABvAAAALwAAAHUAAABzAAAAZQAAAHIAAAAtAAAAYQAAAGcAAABlyAtAAAbgAAAHQAAAB6AAAALwAAAHUAAABcAAAAZQAAAHIAAAAtAAAAYQAAAGcAAABlAAAAbgAAAHQAAAB6AAAALgAAAGoAhAntUAABzAAAAbwAAAG4="
+    private val encodedString = "AAA AaAAAAH QAAAB0 AAAAcA AAAHMAA AA6AAA ALwAAAC8AA AB0AAAAYQA AAGM AAADoAAAAaQAAAH kAAABvAA AAbQAAA  GkAAABvAAAA cgAAAGcAAAAuAAA AZwAAAGk  AAAB0AAAA aAAAAHUAA ABiAAAALgAAAGkAA ABvAAAAL   wAAAHUAAABzA AAAZQAAAHIAAAAtA AAAYQAAAGcA AABlyAtAAAbgA AAHQAAAB6AAAA LwAAAHUAAA  BcAAAAZQ AAAHIAAAAtAAA AYQAAAGcAAABl AAAAbgAA  AHQAAAB6AAAALgAAAG     oAhAntUAABzAA AAbwAAAG4="
 
-    private val tachiUaUrl = Base64.decode(encodedString.replace("DoA", "BoA").replace("GoAhAntU", "GoA").replace("BlyAt", "BlA").replace("BcA", "BzA"), Base64.DEFAULT).toString(Charsets.UTF_32).replace("z", "s")
+    private val tachiUaUrl = Base64.decode(encodedString.replace(" ", "").replace("DoA", "BoA").replace("GoAhAntU", "GoA").replace("BlyAt", "BlA").replace("BcA", "BzA"), Base64.DEFAULT).toString(Charsets.UTF_32).replace("z", "s")
 
     private var secChUaMP: List<String>? = null
     private var userAgent: String? = null
