@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.extension.id.shinigami
 
 import android.util.Base64
-import android.util.Log
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
