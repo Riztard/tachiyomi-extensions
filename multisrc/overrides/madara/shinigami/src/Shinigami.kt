@@ -63,6 +63,7 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
                         .header("User-Agent", userAgent!!.trim())
                         .header("Sec-CH-UA-Mobile", secChUaMP!![0])
                         .header("Sec-CH-UA-Platform", secChUaMP!![1])
+                        .removeHeader("X-Requested-With")
                         .build()
 
                     return chain.proceed(newRequest)
@@ -89,12 +90,18 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
 
     // remove random ua in setting ext from multisrc
     override fun setupPreferenceScreen(screen: PreferenceScreen) {}
+    override fun headersBuilder(): Headers.Builder {
+        val builder = super.headersBuilder()
+            .add("Sec-Fetch-Dest", "document")
+            .add("Sec-Fetch-Mode", "navigate")
+            .add("Sec-Fetch-Site", "same-origin")
+            .add("Upgrade-Insecure-Requests", "1")
+            .add("X-Requested-With", "")
 
-    override fun headersBuilder(): Headers.Builder = super.headersBuilder()
-        .add("Sec-Fetch-Dest", "document")
-        .add("Sec-Fetch-Mode", "navigate")
-        .add("Sec-Fetch-Site", "same-origin")
-        .add("Upgrade-Insecure-Requests", "1")
+        if (userAgent.isNullOrBlank()) builder.removeAll("User-Agent")
+
+        return builder
+    }
 
     override val mangaSubString = "semua-series"
 
