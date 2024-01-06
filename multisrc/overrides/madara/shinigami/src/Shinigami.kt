@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.extension.id.shinigami
 
 import android.util.Base64
+import android.util.Log
+import android.widget.Toast
+import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.multisrc.madara.Madara
 import eu.kanade.tachiyomi.network.GET
@@ -33,7 +36,10 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
 
     private val uaIntercept = object : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
+            val customUa = preferences.getString(PREF_KEY_CUSTOM_UA, "")
             try {
+                if (customUa!!.isNotBlank()) userAgent = customUa
+
                 if (userAgent.isNullOrBlank() && checkedUa.not()) {
                     val uaResponse = chain.proceed(GET(tachiUaUrl))
                     if (uaResponse.isSuccessful) {
@@ -88,8 +94,6 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    // remove random ua in setting ext from multisrc
-    override fun setupPreferenceScreen(screen: PreferenceScreen) {}
     override fun headersBuilder(): Headers.Builder {
         val builder = super.headersBuilder()
             .add("Sec-Fetch-Dest", "document")
@@ -119,5 +123,36 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         val fixedUrl = urlElement.attr("abs:href")
 
         setUrlWithoutDomain(fixedUrl)
+    }
+
+    // remove random ua in setting ext from multisrc and use custom one
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        val prefCustomUserAgent = EditTextPreference(screen.context).apply {
+            key = PREF_KEY_CUSTOM_UA
+            title = TITLE_CUSTOM_UA
+            summary = (preferences.getString(PREF_KEY_CUSTOM_UA, "")!!.trim() + SUMMARY_STRING_CUSTOM_UA).trim()
+            setOnPreferenceChangeListener { _, newValue ->
+                val customUa = newValue as String
+                preferences.edit().putString(PREF_KEY_CUSTOM_UA, customUa).apply()
+                if (customUa.isNullOrBlank()) {
+                    Toast.makeText(screen.context, RESTART_APP_STRING, Toast.LENGTH_LONG).show()
+                } else {
+                    userAgent = null
+                }
+                summary = (customUa.trim() + SUMMARY_STRING2_CUSTOM_UA).trim()
+
+                true
+            }
+        }
+        screen.addPreference(prefCustomUserAgent)
+    }
+
+    companion object {
+        const val TITLE_CUSTOM_UA = "Custom User-Agent"
+        const val PREF_KEY_CUSTOM_UA = "pref_key_custom_ua"
+        const val SUMMARY_STRING_CUSTOM_UA = "\n\nBiarkan kosong untuk menggunakan User-Agent secara random"
+        const val SUMMARY_STRING2_CUSTOM_UA = "\n\nKosongkan untuk menggunakan User-Agent secara random"
+
+        const val RESTART_APP_STRING = "Restart Tachiyomi untuk menggunakan pengaturan baru."
     }
 }
