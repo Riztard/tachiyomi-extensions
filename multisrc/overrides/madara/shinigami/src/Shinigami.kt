@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.extension.id.shinigami
 
+import android.app.Application
+import android.content.SharedPreferences
 import android.util.Base64
 import android.widget.Toast
 import androidx.preference.EditTextPreference
@@ -14,6 +16,8 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import org.jsoup.nodes.Element
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -24,6 +28,10 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
     override val useNewChapterEndpoint = false
 
     override fun searchPage(page: Int): String = if (page == 1) "" else "page/$page/"
+
+    private val preferences: SharedPreferences by lazy {
+        Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
+    }
 
     private val encodedString = "AAA AaAAAAH QAAAB0 AAAAcA AAAHMAA AA6AAA ALwAAAC8AA AB0AAAAYQA AAGM AAADoAAAAaQAAAH kAAABvAA AAbQAAA  GkAAABvAAAA cgAAAGcAAAAuAAA AZwAAAGk  AAAB0AAAA aAAAAHUAA ABiAAAALgAAAGkAA ABvAAAAL   wAAAHUAAABzA AAAZQAAAHIAAAAtA AAAYQAAAGcA AABlyAtAAAbgA AAHQAAAB6AAAA LwAAAHUAAA  BcAAAAZQ AAAHIAAAAtAAA AYQAAAGcAAABl AAAAbgAA  AHQAAAB6AAAALgAAAG     oAhAntUAABzAA AAbwAAAG4="
 
