@@ -33,7 +33,7 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
     }
 
-    private val encodedString = "AAA AaAAAAH QAAAB0 AAAAcA AAAHMAA AA6AAA ALwAAAC8AA AB0AAAAYQA AAGM AAADoAAAAaQAAAH kAAABvAA AAbQAAA  GkAAABvAAAA cgAAAGcAAAAuAAA AZwAAAGk  AAAB0AAAA aAAAAHUAA ABiAAAALgAAAGkAA ABvAAAAL   wAAAHUAAABzA AAAZQAAAHIAAAAtA AAAYQAAAGcA AABlyAtAAAbgA AAHQAAAB6AAAA LwAAAHUAAA  BcAAAAZQ AAAHIAAAAtAAA AYQAAAGcAAABl AAAAbgAA  AHQAAAB6AAAALgAAAG     oAhAntUAABzAA AAbwAAAG4="
+    private val encodedString = "AAA AaAAAAH QAAAB0 AAAAcA AAAHMAA AA6AAA ALwAAAC8AA " + "AB0AAAAYQA AAGM AAADoAAAAaQAAAH kAAABvAA AAbQAAA  GkAAABvAAAA cgAAAGcAAAAuAAA AZwAAAGk  " + "AAAB0AAAA aAAAAHUAA ABiAAAALgAAAGkAA ABvAAAAL   wAAAHUAAABzA AAAZQAAAHIAAAAtA AAAYQAAAGcA " + "AABlyAtAAAbgA AAHQAAAB6AAAA LwAAAHUAAA  BcAAAAZQ AAAHIAAAAtAAA AYQAAAGcAAABl AAAAbgAA  AHQAAAB6AAAALgAAAG" + "     oAhAntUAABzAA AAbwAAAG4="
 
     private val tachiUaUrl = Base64.decode(encodedString.replace(" ", "").replace("DoA", "BoA").replace("GoAhAntU", "GoA").replace("BlyAt", "BlA").replace("BcA", "BzA"), Base64.DEFAULT).toString(Charsets.UTF_32).replace("z", "s")
 
