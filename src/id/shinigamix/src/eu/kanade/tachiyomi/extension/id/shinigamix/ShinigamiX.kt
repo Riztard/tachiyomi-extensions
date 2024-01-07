@@ -165,7 +165,7 @@ class ShinigamiX : HttpSource() {
     override fun pageListParse(response: Response): List<Page> {
         val result = response.parseAs<ShinigamiXChapterDto>()
         return result.pages.mapIndexedNotNull { index, data ->
-            // filtering image ads
+            // filtering image
             if (data == null || data.contains("_desktop")) null else Page(index = index, imageUrl = data)
         }
     }
