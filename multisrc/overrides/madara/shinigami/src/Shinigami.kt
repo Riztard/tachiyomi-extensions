@@ -107,8 +107,9 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
             .add("Sec-Fetch-Mode", "navigate")
             .add("Sec-Fetch-Site", "same-origin")
             .add("Upgrade-Insecure-Requests", "1")
-            .add("X-Requested-With", "")
+            .add("X-Requested-With", "") // added for webview, and removed in interceptor for normal use
 
+        // used to flush tachi custom ua in webview and use system ua instead
         if (userAgent.isNullOrBlank()) builder.removeAll("User-Agent")
 
         return builder
