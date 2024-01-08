@@ -6,8 +6,11 @@ import android.util.Base64
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
+import eu.kanade.tachiyomi.lib.cryptoaes.CryptoAES
+import eu.kanade.tachiyomi.lib.synchrony.Deobfuscator
 import eu.kanade.tachiyomi.multisrc.madara.Madara
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -15,6 +18,7 @@ import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -133,6 +137,37 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         setUrlWithoutDomain(fixedUrl)
     }
 
+    // Page list
+
+    @Serializable
+    data class CDT(val ct: String, val s: String)
+
+    override fun pageListParse(document: Document): List<Page> {
+        val script = document.selectFirst("script:containsData(chapter_data)")?.data()
+            ?: throw Exception("chapter_data script not found")
+
+        val deobfuscated = Deobfuscator.deobfuscateScript(script)
+            ?: throw Exception("Unable to deobfuscate chapter_data script")
+
+        val postId = script.substringAfter("var post_id = '").substringBefore("'")
+        val chapterData = json.decodeFromString<CDT>(
+            script.substringAfter("var chapter_data = '").substringBefore("'"),
+        )
+
+        val keyMatch = KEY_REGEX.find(deobfuscated)!!.groupValues
+        val key = postId + keyMatch[1] + postId + keyMatch[2] + postId
+        val salt = chapterData.s.decodeHex()
+
+        val unsaltedCiphertext = Base64.decode(chapterData.ct, Base64.DEFAULT)
+        val ciphertext = SALTED + salt + unsaltedCiphertext
+
+        val decrypted = CryptoAES.decrypt(Base64.encodeToString(ciphertext, Base64.DEFAULT), key)
+        val data = json.decodeFromString<List<String>>(decrypted)
+        return data.mapIndexed { idx, it ->
+            Page(idx, document.location(), it)
+        }
+    }
+
     // remove random ua in setting ext from multisrc and use custom one
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         val prefCustomUserAgent = EditTextPreference(screen.context).apply {
@@ -162,5 +197,7 @@ class Shinigami : Madara("Shinigami", "https://shinigami.moe", "id") {
         const val SUMMARY_STRING2_CUSTOM_UA = "\n\nKosongkan untuk menggunakan User-Agent secara random"
 
         const val RESTART_APP_STRING = "Restart Tachiyomi untuk menggunakan pengaturan baru."
+
+        private val KEY_REGEX by lazy { Regex("""post_id\s+\+\s+'(.*?)'\s+\+\s+post_id\s+\+\s+'(.*?)'\s+\+\s+post_id""") }
     }
 }
