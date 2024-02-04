@@ -1,0 +1,17 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlinx-serialization'
+
+ext {
+    extName = 'Rizz Comic X'
+    pkgNameSuffix = 'en.rizzcomicx'
+    extClass = '.RizzComicX'
+    extVersionCode = 4
+}
+
+apply from: "$rootDir/common.gradle"
+
+dependencies {
+    implementation(project(":lib-randomua"))
+}
+
