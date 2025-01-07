@@ -2,10 +2,10 @@
   {
     "name": "Tachiyomi: Asura Scans X",
     "pkg": "eu.kanade.tachiyomi.extension.en.asurascansx",
-    "apk": "tachiyomi-en.asurascansx-v1.4.44.apk",
+    "apk": "tachiyomi-en.asurascansx-v1.4.45.apk",
     "lang": "en",
-    "code": 44,
-    "version": "1.4.44",
+    "code": 45,
+    "version": "1.4.45",
     "nsfw": 0,
     "hasReadme": 0,
     "hasChangelog": 0,
