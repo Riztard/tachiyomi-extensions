@@ -122,10 +122,10 @@
   {
     "name": "Tachiyomi: Shinigami X",
     "pkg": "eu.kanade.tachiyomi.extension.id.shinigamix",
-    "apk": "tachiyomi-id.shinigamix-v1.4.8.apk",
+    "apk": "tachiyomi-id.shinigamix-v1.4.9.apk",
     "lang": "id",
-    "code": 8,
-    "version": "1.4.8",
+    "code": 9,
+    "version": "1.4.9",
     "nsfw": 0,
     "hasReadme": 0,
     "hasChangelog": 0,
@@ -134,7 +134,7 @@
         "name": "Shinigami X",
         "lang": "id",
         "id": "8285234031960655796",
-        "baseUrl": "https://shinigami03.com",
+        "baseUrl": "https://shinigami09.com",
         "versionId": 1
       }
     ]
