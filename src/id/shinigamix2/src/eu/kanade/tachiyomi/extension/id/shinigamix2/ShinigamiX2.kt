@@ -38,11 +38,11 @@ class ShinigamiX2 : ConfigurableSource, HttpSource() {
 
     override val baseUrl by lazy { getPrefBaseUrl() }
 
-    private var defaultBaseUrl = "https://beta.shinigami.asia"
+    private var defaultBaseUrl = "https://app.shinigami.asia"
 
     private val apiUrl = "https://api.shngm.io"
 
-    private val cdnUrl = "https://cdn.shngm.id"
+    private val cdnUrl = "https://storage.shngm.id"
 
     override val lang = "id"
 
@@ -253,6 +253,10 @@ class ShinigamiX2 : ConfigurableSource, HttpSource() {
     override fun imageRequest(page: Page): Request {
         val newHeaders = headersBuilder()
             .add("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+            .add("DNT", "1")
+            .add("referer", baseUrl)
+            .add("sec-fetch-dest", "empty")
+            .add("Sec-GPC", "1")
             .add("User-Agent", userAgent)
             .build()
 
