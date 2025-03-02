@@ -34,7 +34,7 @@ class ShinigamiX2 : ConfigurableSource, HttpSource() {
 
     // aplikasi premium shinigami ID APK free gratis
 
-    override val name = "Shinigami X2"
+    override val name = "Shinigami X2 βeta"
 
     override val baseUrl by lazy { getPrefBaseUrl() }
 
