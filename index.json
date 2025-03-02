@@ -138,5 +138,25 @@
         "versionId": 1
       }
     ]
+  },
+  {
+    "name": "Tachiyomi: Shinigami X2",
+    "pkg": "eu.kanade.tachiyomi.extension.id.shinigamix2",
+    "apk": "tachiyomi-id.shinigamix2-v1.4.1.apk",
+    "lang": "id",
+    "code": 1,
+    "version": "1.4.1",
+    "nsfw": 0,
+    "hasReadme": 0,
+    "hasChangelog": 0,
+    "sources": [
+      {
+        "name": "Shinigami X2 βeta",
+        "lang": "id",
+        "id": "2806051035673873843",
+        "baseUrl": "https://app.shinigami.asia",
+        "versionId": 1
+      }
+    ]
   }
 ]
