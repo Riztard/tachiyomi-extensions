@@ -224,8 +224,8 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     private fun chapterFromObject(obj: ShinigamiXChapterListDataDto): SChapter = SChapter.create().apply {
-        date_upload = obj.date.toDate() ?: 0
-        name = "Chapter ${obj.name} ${obj.title}"
+        date_upload = obj.date.toDate()
+        name = "Chapter ${obj.name.toString().replace(".0","")} ${obj.title}"
         url = "$apiUrl/$API_BASE_PATH/chapter/detail/" + obj.chapterId
     }
 
