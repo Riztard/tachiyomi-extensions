@@ -20,26 +20,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: Radiant Scans",
-    "pkg": "eu.kanade.tachiyomi.extension.en.luminousscans",
-    "apk": "tachiyomi-en.luminousscans-v1.4.39.apk",
-    "lang": "en",
-    "code": 39,
-    "version": "1.4.39",
-    "nsfw": 0,
-    "hasReadme": 0,
-    "hasChangelog": 0,
-    "sources": [
-      {
-        "name": "Radiant Scans",
-        "lang": "en",
-        "id": "1019556752273106311",
-        "baseUrl": "https://radiantscans.com",
-        "versionId": 1
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: Manga Updates",
     "pkg": "eu.kanade.tachiyomi.extension.en.mangaupdates",
     "apk": "tachiyomi-en.mangaupdates-v1.4.6.apk",
@@ -122,10 +102,10 @@
   {
     "name": "Tachiyomi: Shinigami X",
     "pkg": "eu.kanade.tachiyomi.extension.id.shinigamix",
-    "apk": "tachiyomi-id.shinigamix-v1.4.12.apk",
+    "apk": "tachiyomi-id.shinigamix-v1.4.13.apk",
     "lang": "id",
-    "code": 12,
-    "version": "1.4.12",
+    "code": 13,
+    "version": "1.4.13",
     "nsfw": 0,
     "hasReadme": 0,
     "hasChangelog": 0,
