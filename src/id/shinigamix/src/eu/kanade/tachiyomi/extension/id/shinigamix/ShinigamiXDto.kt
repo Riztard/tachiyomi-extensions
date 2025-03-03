@@ -5,33 +5,67 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ShinigamiXBrowseDto(
-    val url: String? = "",
+    val data: List<ShinigamiXBrowseDataDto>,
+    val meta: MetaDto,
+)
+
+@Serializable
+data class ShinigamiXBrowseDataDto(
+    @SerialName("cover_image_url") val thumbnail: String? = "",
+    @SerialName("manga_id") val mangaId: String? = "",
     val title: String? = "",
-    @SerialName("cover") val thumbnail: String? = "",
+)
+
+@Serializable
+data class MetaDto(
+    val page: Int,
+    @SerialName("total_page") val totalPage: Int,
 )
 
 @Serializable
 data class ShinigamiXMangaDetailDto(
-    @SerialName("synopsis") val description: String = "",
-    val detailList: List<ShinigamiXMangaDetailListDto>? = null,
+    val data: ShinigamiXMangaDetailDataDto,
 )
 
 @Serializable
-data class ShinigamiXMangaDetailListDto(
-    val name: String = "",
-    val value: String = "",
+data class ShinigamiXMangaDetailDataDto(
+    val description: String = "",
+//    @SerialName("alternative_title") val alternativeTitle: String = "",
+    val status: Int = 0,
+    val taxonomy: Map<String, List<TaxonomyItemDto>> = emptyMap(),
+)
+
+@Serializable
+data class TaxonomyItemDto(
+    val name: String,
 )
 
 @Serializable
 data class ShinigamiXChapterListDto(
-    val chapterList: List<ShinigamiXChapterDto>? = null,
+    @SerialName("data") val chapterList: List<ShinigamiXChapterListDataDto>,
+    val meta: MetaDto,
 )
 
 @Serializable
-data class ShinigamiXChapterDto(
-    @SerialName("releaseDate") val date: String = "",
-    @SerialName("title") val name: String = "",
-    val url: String = "",
-    @SerialName("imageList") val pages: List<String> = emptyList(),
-    val slug: String = "",
+data class ShinigamiXChapterListDataDto(
+    @SerialName("release_date") val date: String = "",
+    @SerialName("chapter_title") val title: String = "",
+    @SerialName("chapter_number") val name: Int = 0,
+    @SerialName("chapter_id") val chapterId: String = "",
+)
+
+@Serializable
+data class ShinigamiXPageListDto(
+    @SerialName("data") val pageList: ShinigamiXPagesDataDto,
+)
+
+@Serializable
+data class ShinigamiXPagesDataDto(
+    @SerialName("chapter") val chapterPage: ShinigamiXPagesData2Dto,
+)
+
+@Serializable
+data class ShinigamiXPagesData2Dto(
+    val path: String,
+    @SerialName("data") val pages: List<String> = emptyList(),
 )

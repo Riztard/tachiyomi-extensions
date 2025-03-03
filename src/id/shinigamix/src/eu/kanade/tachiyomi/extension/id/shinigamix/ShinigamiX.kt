@@ -2,11 +2,9 @@ package eu.kanade.tachiyomi.extension.id.shinigamix
 
 import android.app.Application
 import android.content.SharedPreferences
-import android.util.Base64
 import android.widget.Toast
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.network.interceptor.rateLimit
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.FilterList
@@ -22,6 +20,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import org.json.JSONObject
 import rx.Observable
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -39,9 +38,11 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     override val baseUrl by lazy { getPrefBaseUrl() }
 
-    private var defaultBaseUrl = "https://shinigami09.com"
+    private var defaultBaseUrl = "https://app.shinigami.asia"
 
-    private val apiUrl = "https://api.shinigami.ae"
+    private val apiUrl = "https://api.shngm.io"
+
+    private val cdnUrl = "https://storage.shngm.id"
 
     override val lang = "id"
 
@@ -76,66 +77,81 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     private val randomValue = listOf("com.opera.gx", "com.mi.globalbrowser.mini", "com.opera.browser", "com.duckduckgo.mobile.android", "com.brave.browser", "com.vivaldi.browser", "com.android.chrome")
 
-    private val encodedString2 = "AAAApA" + "AAAHU" + "AAABisA" + "AAAVAA" + "AAGgAAAB" + "pAAAAbgA" + "AAGcAA" + "ABzAAAAdwAAA" + "HcAAAB3"
+    private val defaultUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.3"
 
-    private val decodedString2 = Base64.decode(
-        encodedString2
-            .replace("ApA", "AbA")
-            .replace("BisA", "BsA", true),
-        Base64.DEFAULT,
-    )
-        .toString(Charsets.UTF_32).replace("www", "")
+    private fun fetchUserAgents(): Pair<List<String>, List<String>> {
+        val client = OkHttpClient()
+        val request = Request.Builder().url(USER_AGENT_URL).build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw Exception("Failed to fetch user-agents")
+            val jsonData = JSONObject(response.body?.string() ?: throw Exception("Empty response"))
+            val desktopAgents = jsonData.getJSONArray("desktop")
+            val mobileAgents = jsonData.getJSONArray("mobile")
 
-    private val encodedString3 = "AAAAaQAAAH" + "kAAABhAAA" + "AaQAAAG4AAA" + "BapAkAAAeQ" + "AAAGEAAABpA" + "AAAbgAAAGkA" + "AAB5AAAAYQAAA" + "GkAAABuAAAAZ" + "AAAAGGGUAA" + "AAxAAAAMgA" + "AADMAAAA0"
+            val desktopList = List(desktopAgents.length()) { i -> desktopAgents.getString(i) }
+            val mobileList = List(mobileAgents.length()) { i -> mobileAgents.getString(i) }
 
-    private val decodedString3 = Base64.decode(
-        encodedString3
-            .replace("BaPAk", "BpA", true)
-            .replace("GGGUA", "GUA", true),
-        Base64.DEFAULT,
-    )
-        .toString(Charsets.UTF_32).substringBefore("4")
+            return Pair(desktopList, mobileList)
+        }
+    }
+
+    private fun getRandomUserAgent(
+        desktopAgents: List<String>,
+        mobileAgents: List<String>,
+    ): String {
+        return if (Random.nextInt(100) < 70) { // 70% chance for desktop
+            desktopAgents.random()
+        } else {
+            mobileAgents.random()
+        }
+    }
+
+    private val userAgent: String by lazy {
+        try {
+            val (desktopAgents, mobileAgents) = fetchUserAgents()
+            getRandomUserAgent(desktopAgents, mobileAgents)
+        } catch (t: Throwable) {
+            defaultUserAgent
+        }
+    }
 
     private fun apiHeadersBuilder(): Headers.Builder = headersBuilder()
-        .add(decodedString2, decodedString3)
         .add("Accept", "application/json")
-        .add("User-Agent", "okhttp/3.14.9")
+        .add("DNT", "1")
+        .add("Origin", baseUrl)
+        .add("Sec-GPC", "1")
+        .add("User-Agent", userAgent)
 
     override fun popularMangaRequest(page: Int): Request {
-        // Adjust page number based on the pattern: 1, 3, 5, 7, ...
-        val adjustedPage = (page - 1) * 2 + 1
-
-        val url = "$apiUrl/$API_BASE_PATH/filter/views".toHttpUrl().newBuilder()
-            .addQueryParameter("page", adjustedPage.toString())
-            .addQueryParameter("multiple", "true")
+        val url = "$apiUrl/$API_BASE_PATH/manga/list".toHttpUrl().newBuilder()
+            .addQueryParameter("page", page.toString())
+            .addQueryParameter("page_size", "30")
+            .addQueryParameter("sort", "popularity")
             .toString()
 
         return GET(url, apiHeaders)
     }
 
     override fun popularMangaParse(response: Response): MangasPage {
-        val result = response.parseAs<List<ShinigamiXBrowseDto>>()
+        val rootObject = response.parseAs<ShinigamiXBrowseDto>()
+        val projectList = rootObject.data.map(::popularMangaFromObject)
 
-        val projectList = result.map(::popularMangaFromObject)
-
-        val hasNextPage = true
+        val hasNextPage = rootObject.meta.page < rootObject.meta.totalPage
 
         return MangasPage(projectList, hasNextPage)
     }
 
-    private fun popularMangaFromObject(obj: ShinigamiXBrowseDto): SManga = SManga.create().apply {
+    private fun popularMangaFromObject(obj: ShinigamiXBrowseDataDto): SManga = SManga.create().apply {
         title = obj.title.toString()
         thumbnail_url = obj.thumbnail
-        url = obj.url.toString()
+        url = "$apiUrl/$API_BASE_PATH/manga/detail/" + obj.mangaId
     }
 
     override fun latestUpdatesRequest(page: Int): Request {
-        // Adjust page number based on the pattern: 1, 3, 5, 7, ...
-        val adjustedPage = (page - 1) * 2 + 1
-
-        val url = "$apiUrl/$API_BASE_PATH/filter/latest".toHttpUrl().newBuilder()
-            .addQueryParameter("page", adjustedPage.toString())
-            .addQueryParameter("multiple", "true")
+        val url = "$apiUrl/$API_BASE_PATH/manga/list".toHttpUrl().newBuilder()
+            .addQueryParameter("page", page.toString())
+            .addQueryParameter("page_size", "30")
+            .addQueryParameter("sort", "latest")
             .toString()
 
         return GET(url, apiHeaders)
@@ -144,12 +160,12 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     override fun latestUpdatesParse(response: Response): MangasPage = popularMangaParse(response)
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val url = "$apiUrl/$API_BASE_PATH".toHttpUrl().newBuilder()
+        val url = "$apiUrl/$API_BASE_PATH/manga/list".toHttpUrl().newBuilder()
             .addQueryParameter("page", page.toString())
+            .addQueryParameter("page_size", "30")
 
         if (query.isNotEmpty()) {
-            url.addPathSegment("search")
-            url.addQueryParameter("keyword", query)
+            url.addQueryParameter("q", query)
         }
 
         return GET(url.toString(), apiHeaders)
@@ -158,76 +174,85 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     override fun searchMangaParse(response: Response): MangasPage = popularMangaParse(response)
 
     override fun getMangaUrl(manga: SManga): String {
-        return "$baseUrl/series/" + manga.url.substringAfter("/series/")
+        return "$baseUrl/series/" + manga.url.substringAfter("manga/detail/")
     }
 
     override fun mangaDetailsRequest(manga: SManga): Request {
+        // Migration from old api urls to the new one
+        if (!manga.url.contains("api/v1/comic?url=https://")) {
+            throw Exception("Migrate dari $name ke $name (ekstensi yang sama)")
+        }
+
+        return GET(manga.url, apiHeaders)
+    }
+
+    override fun mangaDetailsParse(response: Response): SManga {
+        val mangaDetailsResponse = response.parseAs<ShinigamiXMangaDetailDto>()
+        val mangaDetails = mangaDetailsResponse.data
+
+        return SManga.create().apply {
+            author = mangaDetails.taxonomy["Author"]?.joinToString(", ") { it.name }.orEmpty()
+            artist = mangaDetails.taxonomy["Artist"]?.joinToString(", ") { it.name }.orEmpty()
+            status = mangaDetails.status.toStatus()
+            description = mangaDetails.description
+            // + "\n\nAlternative Title: " + mangaDetails.alternativeTitle
+
+            val genres = mangaDetails.taxonomy["Genre"]?.joinToString(", ") { it.name }.orEmpty()
+            val type = mangaDetails.taxonomy["Format"]?.joinToString(", ") { it.name }.orEmpty()
+            genre = listOf(genres, type).filter { it.isNotBlank() }.joinToString(", ")
+        }
+    }
+
+    private fun Int.toStatus(): Int {
+        return when (this) {
+            1 -> SManga.ONGOING
+            2 -> SManga.COMPLETED
+            else -> SManga.UNKNOWN
+        }
+    }
+    private val random = Random.Default
+
+    override fun chapterListRequest(manga: SManga): Request {
+        val randomPageSize = random.nextInt(2000, 9000)
+
         return GET(
-            "$apiUrl/$API_BASE_PATH/comic?url=${"$baseUrl/series/" +
-                manga.url.substringAfter("?url=").substringAfter("/series/")}",
+            "$apiUrl/$API_BASE_PATH/chapter/" + manga.url.substringAfter("manga/detail/") +
+                "/list?page_size=$randomPageSize",
             apiHeaders,
         )
     }
 
-    override fun mangaDetailsParse(response: Response): SManga {
-        val mangaDetails = response.parseAs<ShinigamiXMangaDetailDto>()
-
-        return SManga.create().apply {
-            author = getValue(mangaDetails.detailList, "Author(s)").replace("Updating", "")
-            artist = getValue(mangaDetails.detailList, "Artist(s)").replace("Updating", "")
-            status = getValue(mangaDetails.detailList, "Tag(s)").toStatus()
-            description = mangaDetails.description
-
-            val type = getValue(mangaDetails.detailList, "Type")
-            genre = getValue(mangaDetails.detailList, "Genre(s)") +
-                if (type.isNullOrBlank().not()) ", $type" else ""
-        }
-    }
-
-    override fun fetchMangaDetails(manga: SManga): Observable<SManga> {
-        return client.newCall(mangaDetailsRequest(manga))
-            .asObservableSuccess()
-            .map {
-                mangaDetailsParse(it).apply {
-                    thumbnail_url = "$baseUrl/wp-content/" +
-                        manga.thumbnail_url?.substringAfter("/wp-content/")
-                }
-            }
-    }
-
-    private fun getValue(detailList: List<ShinigamiXMangaDetailListDto>?, name: String): String {
-        val value = detailList!!.firstOrNull { it.name == name }?.value
-
-        return value.orEmpty()
-    }
-
-    override fun getChapterUrl(chapter: SChapter): String {
-        return chapter.url.substringAfter("?url=")
-    }
-
-    override fun chapterListRequest(manga: SManga): Request = mangaDetailsRequest(manga)
-
     override fun chapterListParse(response: Response): List<SChapter> {
         val result = response.parseAs<ShinigamiXChapterListDto>()
 
-        return result.chapterList!!.map(::chapterFromObject)
+        return result.chapterList.map(::chapterFromObject)
     }
 
-    private fun chapterFromObject(obj: ShinigamiXChapterDto): SChapter = SChapter.create().apply {
-        name = obj.name
-        date_upload = obj.date.toDate()
-        url = "$apiUrl/$API_BASE_PATH_2/chapter?url=" + obj.url
+    private fun chapterFromObject(obj: ShinigamiXChapterListDataDto): SChapter = SChapter.create().apply {
+        date_upload = obj.date.toDate() ?: 0
+        name = "Chapter ${obj.name} ${obj.title}"
+        url = "$apiUrl/$API_BASE_PATH/chapter/detail/" + obj.chapterId
     }
 
     override fun pageListRequest(chapter: SChapter): Request {
+        // Migration from old api urls to the new one
+        if (chapter.url.contains("api/v2/chapter?url=https://")) {
+            throw Exception("Migrate dari $name ke $name (ekstensi yang sama)")
+        }
+
         return GET(chapter.url, apiHeaders)
     }
 
     override fun pageListParse(response: Response): List<Page> {
-        val result = response.parseAs<ShinigamiXChapterDto>()
-        return result.pages.mapIndexedNotNull { index, data ->
-            // filtering image
-            if (data == null || data.contains("_desktop")) null else Page(index = index, imageUrl = data)
+        val result = response.parseAs<ShinigamiXPageListDto>()
+
+        return result.pageList.chapterPage.pages.mapIndexedNotNull { index, imageName ->
+            // Exclude static image starts with 999 like "999-2-b2c059.jpg"
+            if (imageName.startsWith("999-")) {
+                null
+            } else {
+                Page(index = index, imageUrl = "$cdnUrl${result.pageList.chapterPage.path}$imageName")
+            }
         }
     }
 
@@ -238,7 +263,11 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     override fun imageRequest(page: Page): Request {
         val newHeaders = headersBuilder()
             .add("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-            .add("Referer", "$baseUrl/")
+            .add("DNT", "1")
+            .add("referer", baseUrl)
+            .add("sec-fetch-dest", "empty")
+            .add("Sec-GPC", "1")
+            .add("User-Agent", userAgent)
             .build()
 
         return GET(page.imageUrl!!, newHeaders)
@@ -249,15 +278,9 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     private fun String.toDate(): Long {
-        return runCatching { DATE_FORMATTER.parse(this)?.time }
-            .getOrNull() ?: 0L
-    }
-
-    private fun String.toStatus() = when (this) {
-        "Updating", "OnGoing" -> SManga.ONGOING
-        "Completed", "Finished" -> SManga.COMPLETED
-        "Canceled" -> SManga.CANCELLED
-        else -> SManga.UNKNOWN
+        return runCatching { DATE_FORMATTER_V2.parse(this)?.time }.getOrNull()
+            ?: runCatching { DATE_FORMATTER.parse(this)?.time }.getOrNull()
+            ?: 0
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
@@ -291,13 +314,15 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     companion object {
-        private const val API_BASE_PATH = "api/v1"
-        private const val API_BASE_PATH_2 = "api/v2"
-
         private val DATE_FORMATTER by lazy {
             SimpleDateFormat("MMMM dd, yyyy", Locale.ENGLISH)
         }
+        private val DATE_FORMATTER_V2 by lazy {
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH)
+        }
 
+        private const val API_BASE_PATH = "v1"
+        private const val USER_AGENT_URL = "https://keiyoushi.github.io/user-agents/user-agents.json"
         private const val RESTART_APP = "Restart aplikasi untuk menerapkan perubahan."
         private const val BASE_URL_PREF_TITLE = "Ubah Domain"
         private const val BASE_URL_PREF = "overrideBaseUrl"
