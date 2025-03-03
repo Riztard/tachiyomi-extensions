@@ -60,15 +60,11 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         .addInterceptor { chain ->
             val request = chain.request()
             val headers = request.headers.newBuilder().apply {
-                if (request.header("X-Requested-With")!!.isNotBlank()) {
-                    removeAll("X-Requested-With")
-                }
+                removeAll("X-Requested-With")
             }.build()
 
             chain.proceed(request.newBuilder().headers(headers).build())
         }
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
         .rateLimit(24, 1, TimeUnit.SECONDS)
         .build()
 
@@ -178,6 +174,10 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     override fun mangaDetailsRequest(manga: SManga): Request {
+        // Migration from old api urls to the new one
+        if (manga.url.startsWith("https://shinigami0")) {
+            throw Exception("Migrate dari $name ke $name (ekstensi yang sama)")
+        }
         return GET(manga.url, apiHeaders)
     }
 
@@ -259,7 +259,7 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         val newHeaders = headersBuilder()
             .add("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
             .add("DNT", "1")
-            .add("referer", baseUrl)
+            .add("referer", "$baseUrl/")
             .add("sec-fetch-dest", "empty")
             .add("Sec-GPC", "1")
             .add("User-Agent", userAgent)
@@ -295,7 +295,8 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         screen.addPreference(baseUrlPref)
     }
 
-    private fun getPrefBaseUrl(): String = preferences.getString(BASE_URL_PREF, defaultBaseUrl)!!
+    private fun getPrefBaseUrl(): String =
+        preferences.getString(BASE_URL_PREF, defaultBaseUrl)!!.trimEnd('/')
 
     init {
         preferences.getString(DEFAULT_BASE_URL_PREF, null).let { prefDefaultBaseUrl ->
