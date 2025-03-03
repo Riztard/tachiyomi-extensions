@@ -178,11 +178,6 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     override fun mangaDetailsRequest(manga: SManga): Request {
-        // Migration from old api urls to the new one
-        if (!manga.url.contains("api/v1/comic?url=https://")) {
-            throw Exception("Migrate dari $name ke $name (ekstensi yang sama)")
-        }
-
         return GET(manga.url, apiHeaders)
     }
 
