@@ -42,10 +42,10 @@
   {
     "name": "Tachiyomi: Reaper Scans X",
     "pkg": "eu.kanade.tachiyomi.extension.en.reaperscansx",
-    "apk": "tachiyomi-en.reaperscansx-v1.4.55.apk",
+    "apk": "tachiyomi-en.reaperscansx-v1.4.56.apk",
     "lang": "en",
-    "code": 55,
-    "version": "1.4.55",
+    "code": 56,
+    "version": "1.4.56",
     "nsfw": 0,
     "hasReadme": 0,
     "hasChangelog": 0,
