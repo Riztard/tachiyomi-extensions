@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.interceptor.rateLimit
+import eu.kanade.tachiyomi.network.interceptor.rateLimitHost
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -25,9 +26,9 @@ import rx.Observable
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 class ShinigamiX : ConfigurableSource, HttpSource() {
@@ -65,7 +66,8 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
             chain.proceed(request.newBuilder().headers(headers).build())
         }
-        .rateLimit(24, 1, TimeUnit.SECONDS)
+        .rateLimit(20)
+        .rateLimitHost(apiUrl.toHttpUrl(), 4)
         .build()
 
     override fun headersBuilder(): Headers.Builder = Headers.Builder()
@@ -119,11 +121,11 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         .add("User-Agent", userAgent)
 
     override fun popularMangaRequest(page: Int): Request {
-        val url = "$apiUrl/$API_BASE_PATH/manga/list".toHttpUrl().newBuilder()
+        val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
             .addQueryParameter("page", page.toString())
             .addQueryParameter("page_size", "30")
             .addQueryParameter("sort", "popularity")
-            .toString()
+            .build()
 
         return GET(url, apiHeaders)
     }
@@ -138,17 +140,17 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     private fun popularMangaFromObject(obj: ShinigamiXBrowseDataDto): SManga = SManga.create().apply {
-        title = obj.title.toString()
+        title = obj.title!!
         thumbnail_url = obj.thumbnail
-        url = "$apiUrl/$API_BASE_PATH/manga/detail/" + obj.mangaId
+        url = obj.mangaId!!
     }
 
     override fun latestUpdatesRequest(page: Int): Request {
-        val url = "$apiUrl/$API_BASE_PATH/manga/list".toHttpUrl().newBuilder()
+        val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
             .addQueryParameter("page", page.toString())
             .addQueryParameter("page_size", "30")
             .addQueryParameter("sort", "latest")
-            .toString()
+            .build()
 
         return GET(url, apiHeaders)
     }
@@ -156,7 +158,7 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     override fun latestUpdatesParse(response: Response): MangasPage = popularMangaParse(response)
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val url = "$apiUrl/$API_BASE_PATH/manga/list".toHttpUrl().newBuilder()
+        val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
             .addQueryParameter("page", page.toString())
             .addQueryParameter("page_size", "30")
 
@@ -164,7 +166,9 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
             url.addQueryParameter("q", query)
         }
 
-        return GET(url.toString(), apiHeaders)
+        // TODO: search by tag/genre/status/etc
+
+        return GET(url.build(), apiHeaders)
     }
 
     override fun searchMangaParse(response: Response): MangasPage = popularMangaParse(response)
@@ -175,10 +179,11 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     override fun mangaDetailsRequest(manga: SManga): Request {
         // Migration from old api urls to the new one
-        if (manga.url.startsWith("https://shinigami0")) {
+        if (manga.url.startsWith("https://shinigami0") || manga.url.contains("v1/manga/detail")) {
             throw Exception("Migrate dari $name ke $name (ekstensi yang sama)")
         }
-        return GET(manga.url, apiHeaders)
+
+        return GET("$apiUrl/v1/manga/detail/${manga.url}", apiHeaders)
     }
 
     override fun mangaDetailsParse(response: Response): SManga {
@@ -186,15 +191,19 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         val mangaDetails = mangaDetailsResponse.data
 
         return SManga.create().apply {
-            author = mangaDetails.taxonomy["Author"]?.joinToString(", ") { it.name }.orEmpty()
-            artist = mangaDetails.taxonomy["Artist"]?.joinToString(", ") { it.name }.orEmpty()
+            author = mangaDetails.taxonomy["Author"]?.joinToString { it.name }.orEmpty()
+            artist = mangaDetails.taxonomy["Artist"]?.joinToString { it.name }.orEmpty()
             status = mangaDetails.status.toStatus()
-            description = mangaDetails.description
-            // + "\n\nAlternative Title: " + mangaDetails.alternativeTitle
+            description = mangaDetails.description +
+                if (mangaDetails.title == mangaDetails.alternativeTitle || mangaDetails.alternativeTitle.isBlank()) {
+                    ""
+                } else {
+                    "\n\nAlternative Title: " + mangaDetails.alternativeTitle
+                }
 
-            val genres = mangaDetails.taxonomy["Genre"]?.joinToString(", ") { it.name }.orEmpty()
-            val type = mangaDetails.taxonomy["Format"]?.joinToString(", ") { it.name }.orEmpty()
-            genre = listOf(genres, type).filter { it.isNotBlank() }.joinToString(", ")
+            val genres = mangaDetails.taxonomy["Genre"]?.joinToString { it.name }.orEmpty()
+            val type = mangaDetails.taxonomy["Format"]?.joinToString { it.name }.orEmpty()
+            genre = listOf(genres, type).filter { it.isNotBlank() }.joinToString()
         }
     }
 
@@ -205,14 +214,18 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
             else -> SManga.UNKNOWN
         }
     }
+
     private val random = Random.Default
 
     override fun chapterListRequest(manga: SManga): Request {
         val randomPageSize = random.nextInt(2000, 9000)
 
+        if (manga.url.contains("v1/manga/detail")) {
+            manga.url = manga.url.substringAfter("manga/detail/")
+        }
+
         return GET(
-            "$apiUrl/$API_BASE_PATH/chapter/" + manga.url.substringAfter("manga/detail/") +
-                "/list?page_size=$randomPageSize",
+            "$apiUrl/v1/chapter/${manga.url}/list?page_size=$randomPageSize",
             apiHeaders,
         )
     }
@@ -224,18 +237,20 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     private fun chapterFromObject(obj: ShinigamiXChapterListDataDto): SChapter = SChapter.create().apply {
-        date_upload = obj.date.toDate()
+        date_upload = dateFormat.tryParse(obj.date)
         name = "Chapter ${obj.name.toString().replace(".0","")} ${obj.title}"
-        url = "$apiUrl/$API_BASE_PATH/chapter/detail/" + obj.chapterId
+        url = obj.chapterId
     }
 
     override fun pageListRequest(chapter: SChapter): Request {
         // Migration from old api urls to the new one
         if (chapter.url.contains("api/v2/chapter?url=https://")) {
             throw Exception("Migrate dari $name ke $name (ekstensi yang sama)")
+        } else if (chapter.url.contains("v1/chapter/detail")) {
+            chapter.url = chapter.url.substringAfter("chapter/detail/")
         }
 
-        return GET(chapter.url, apiHeaders)
+        return GET("$apiUrl/v1/chapter/detail/${chapter.url}", apiHeaders)
     }
 
     override fun pageListParse(response: Response): List<Page> {
@@ -272,10 +287,14 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         json.decodeFromString(it.body.string())
     }
 
-    private fun String.toDate(): Long {
-        return runCatching { DATE_FORMATTER_V2.parse(this)?.time }.getOrNull()
-            ?: runCatching { DATE_FORMATTER.parse(this)?.time }.getOrNull()
-            ?: 0
+    private fun SimpleDateFormat.tryParse(date: String?): Long {
+        date ?: return 0L
+
+        return try {
+            parse(date)?.time ?: 0L
+        } catch (_: ParseException) {
+            0L
+        }
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
@@ -310,14 +329,8 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
     }
 
     companion object {
-        private val DATE_FORMATTER by lazy {
-            SimpleDateFormat("MMMM dd, yyyy", Locale.ENGLISH)
-        }
-        private val DATE_FORMATTER_V2 by lazy {
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH)
-        }
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH)
 
-        private const val API_BASE_PATH = "v1"
         private const val USER_AGENT_URL = "https://keiyoushi.github.io/user-agents/user-agents.json"
         private const val RESTART_APP = "Restart aplikasi untuk menerapkan perubahan."
         private const val BASE_URL_PREF_TITLE = "Ubah Domain"
