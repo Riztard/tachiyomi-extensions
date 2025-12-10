@@ -357,6 +357,7 @@ abstract class Comick(
             query = "",
             filters = FilterList(
                 SortFilter("follow"),
+                ContentRatingFilter("Content Rating", getContentRatingList),
             ),
         )
     }
@@ -376,6 +377,7 @@ abstract class Comick(
             query = "",
             filters = FilterList(
                 SortFilter("uploaded"),
+                ContentRatingFilter("Content Rating", getContentRatingList),
             ),
         )
     }
@@ -401,9 +403,9 @@ abstract class Comick(
                 .asObservableSuccess()
                 .map(::searchMangaParse)
         } else {
-            // text search, no pagination in api
+            // text search with filters
             if (page == 1) {
-                client.newCall(querySearchRequest(query))
+                client.newCall(querySearchRequest(query, filters))
                     .asObservableSuccess()
                     .map(::querySearchParse)
             } else {
@@ -412,11 +414,99 @@ abstract class Comick(
         }
     }
 
-    private fun querySearchRequest(query: String): Request {
-        val url = "$apiUrl/v1.0/search?limit=300&page=1&tachiyomi=true"
-            .toHttpUrl().newBuilder()
-            .addQueryParameter("q", query.trim())
-            .build()
+    private fun querySearchRequest(query: String, filters: FilterList): Request {
+        val url = "$apiUrl/v1.0/search".toHttpUrl().newBuilder().apply {
+            addQueryParameter("q", query.trim())
+            filters.forEach { it ->
+                when (it) {
+                    is CompletedFilter -> {
+                        if (it.state) {
+                            addQueryParameter("completed", "true")
+                        }
+                    }
+
+                    is GenreFilter -> {
+                        it.state.filter { it.isIncluded() }.forEach {
+                            addQueryParameter("genres", it.value)
+                        }
+
+                        it.state.filter { it.isExcluded() }.forEach {
+                            addQueryParameter("excludes", it.value)
+                        }
+                    }
+
+                    is DemographicFilter -> {
+                        it.state.filter { it.state }.forEach {
+                            addQueryParameter("demographic", it.value)
+                        }
+                    }
+
+                    is TypeFilter -> {
+                        it.state.filter { it.state }.forEach {
+                            addQueryParameter("country", it.value)
+                        }
+                    }
+
+                    is SortFilter -> {
+                        addQueryParameter("sort", it.getValue())
+                    }
+
+                    is StatusFilter -> {
+                        if (it.state > 0) {
+                            addQueryParameter("status", it.getValue())
+                        }
+                    }
+
+                    is ContentRatingFilter -> {
+                        if (it.state > 0) {
+                            addQueryParameter("content_rating", it.getValue())
+                        }
+                    }
+
+                    is CreatedAtFilter -> {
+                        if (it.state > 0) {
+                            addQueryParameter("time", it.getValue())
+                        }
+                    }
+
+                    is MinimumFilter -> {
+                        if (it.state.isNotEmpty()) {
+                            addQueryParameter("minimum", it.state)
+                        }
+                    }
+
+                    is FromYearFilter -> {
+                        if (it.state.isNotEmpty()) {
+                            addQueryParameter("from", it.state)
+                        }
+                    }
+
+                    is ToYearFilter -> {
+                        if (it.state.isNotEmpty()) {
+                            addQueryParameter("to", it.state)
+                        }
+                    }
+
+                    is TagFilter -> {
+                        if (it.state.isNotEmpty()) {
+                            addTagQueryParameters(this, it.state, "tags")
+                        }
+                    }
+
+                    is ExcludedTagFilter -> {
+                        if (it.state.isNotEmpty()) {
+                            addTagQueryParameters(this, it.state, "excluded-tags")
+                        }
+                    }
+
+                    else -> {}
+                }
+            }
+            addTagQueryParameters(this, preferences.ignoredTags, "excluded-tags")
+            addQueryParameter("tachiyomi", "true")
+            addQueryParameter("limit", "300")
+            addQueryParameter("page", "1")
+        }.build()
 
         return GET(url, headers)
     }

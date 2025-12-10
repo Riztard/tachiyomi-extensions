@@ -5,7 +5,6 @@ import eu.kanade.tachiyomi.source.model.FilterList
 
 fun getFilters(): FilterList {
     return FilterList(
-        Filter.Header(name = "The filter is ignored when using text search."),
         GenreFilter("Genre", getGenresList),
         DemographicFilter("Demographic", getDemographicList),
         TypeFilter("Type", getTypeList),
@@ -56,8 +55,8 @@ internal class SortFilter(defaultValue: String? = null, state: Int = 0) :
 internal class StatusFilter(name: String, statusList: List<Pair<String, String>>, state: Int = 0) :
     SelectFilter(name, statusList, state)
 
-internal class ContentRatingFilter(name: String, statusList: List<Pair<String, String>>, state: Int = 0) :
-    SelectFilter(name, statusList, state)
+internal class ContentRatingFilter(name: String, statusList: List<Pair<String, String>>, state: Int = 0, defaultValue: String? = "safe") :
+    SelectFilter(name, statusList, state, defaultValue)
 
 /** Generics **/
 internal open class TriFilter(name: String, val value: String) : Filter.TriState(name)
@@ -200,7 +199,7 @@ private val getStatusList: List<Pair<String, String>> = listOf(
     Pair("Hiatus", "4"),
 )
 
-private val getContentRatingList: List<Pair<String, String>> = listOf(
+internal val getContentRatingList: List<Pair<String, String>> = listOf(
     Pair("All", ""),
     Pair("Safe", "safe"),
     Pair("Suggestive", "suggestive"),
