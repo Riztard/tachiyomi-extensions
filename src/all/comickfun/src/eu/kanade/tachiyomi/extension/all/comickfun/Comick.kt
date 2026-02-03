@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.extension.all.comickfun
 
 import android.app.Application
 import android.content.SharedPreferences
-import android.util.Base64
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
@@ -659,7 +658,7 @@ abstract class Comick(
         if (!preferences.updateCover && manga.thumbnail_url != mangaData.comic.cover) {
             val coversUrl =
                 "$apiUrl/comic/${mangaData.comic.slug ?: mangaData.comic.hid}/covers?tachiyomi=true"
-            val covers = client.newCall(GET(coversUrl)).execute()
+            val covers = client.newCall(GET(coversUrl, headers)).execute()
                 .parseAs<Covers>().mdCovers.reversed()
             val firstVol = covers.filter { it.vol == "1" }.ifEmpty { covers }
             val originalCovers = firstVol
@@ -711,8 +710,7 @@ abstract class Comick(
     override fun chapterListParse(response: Response): List<SChapter> {
         // Decode the XOR-encrypted base64 response
         val bodyString = response.body.string()
-        val decodedString = decodeComickApi(bodyString)
-        val chapterListResponse = json.decodeFromString<ChapterList>(decodedString)
+        val chapterListResponse = json.decodeFromString<ChapterList>(bodyString)
 
         val preferredGroups = preferences.preferredGroups
         val ignoredGroupsLowercase = preferences.ignoredGroups.map { it.lowercase() }
@@ -801,16 +799,6 @@ abstract class Comick(
 
     override fun pageListParse(response: Response): List<Page> {
         throw UnsupportedOperationException(PAGE_LIST_TOAST)
-    }
-
-    private fun decodeComickApi(b64Data: String): String {
-        val key = baseUrl.toByteArray(Charsets.UTF_8)
-        val data = Base64.decode(b64Data, Base64.DEFAULT)
-        val decoded = ByteArray(data.size)
-        for (i in data.indices) {
-            decoded[i] = (data[i].toInt() xor key[i % key.size].toInt()).toByte()
-        }
-        return decoded.toString(Charsets.UTF_8)
     }
 
     private inline fun <reified T> Response.parseAs(): T {
