@@ -340,26 +340,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: Reaper Scans X",
-    "pkg": "eu.kanade.tachiyomi.extension.en.reaperscansx",
-    "apk": "tachiyomi-en.reaperscansx-v1.4.56.apk",
-    "lang": "en",
-    "code": 56,
-    "version": "1.4.56",
-    "nsfw": 0,
-    "hasReadme": 0,
-    "hasChangelog": 0,
-    "sources": [
-      {
-        "name": "Reaper Scans X",
-        "lang": "en",
-        "id": "4948311552077392076",
-        "baseUrl": "https://reaperscans.com",
-        "versionId": 3
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: Rizz Comic X",
     "pkg": "eu.kanade.tachiyomi.extension.en.rizzcomicx",
     "apk": "tachiyomi-en.rizzcomicx-v1.4.57.apk",
