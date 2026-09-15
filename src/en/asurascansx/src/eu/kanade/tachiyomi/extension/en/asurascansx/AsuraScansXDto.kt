@@ -46,6 +46,10 @@ class MangaDto(
     private val author: String? = null,
     private val artist: String? = null,
     private val description: String? = null,
+    private val rating: Double? = null,
+    @SerialName("alt_titles")
+    @JsonNames("alternativeTitles")
+    private val alternativeTitles: List<String>? = null,
     private val type: String? = null,
     private val genres: List<GenreDto>? = null,
     private val status: String? = null,
@@ -61,19 +65,46 @@ class MangaDto(
         thumbnail_url = cover
         author = this@MangaDto.author
         artist = this@MangaDto.artist
-        description = this@MangaDto.description?.let { Jsoup.parseBodyFragment(it) }?.text()
+        description = parseDescription()
         genre = buildList {
-            type?.replaceFirstChar { it.uppercase() }?.let { add(it) }
             genres?.map { it.name }?.let { addAll(it) }
+            type?.replaceFirstChar { it.uppercase() }?.let { add(it) }
         }.joinToString()
         status = parseStatus()
     }
 
+    fun parseDescription(): String = buildString {
+        description
+            ?.let { Jsoup.parseBodyFragment(it).text() }
+            ?.takeIf { it.isNotEmpty() }
+            ?.let {
+                if (isNotEmpty()) append("\n\n")
+                append(it)
+            }
+
+        rating?.let {
+            if (isNotEmpty()) append("\n\n")
+            append("Rating: %.2f".format(it))
+        }
+
+        val cleanAltTitles = alternativeTitles
+            ?.flatMap { title ->
+                if (title.contains("•")) title.split("•") else listOf(title)
+            }
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+
+        if (!cleanAltTitles.isNullOrEmpty()) {
+            if (isNotEmpty()) append("\n\n")
+            append("Alternative Titles:\n")
+            cleanAltTitles.joinTo(this, "\n") { "- $it" }
+        }
+    }
     fun parseStatus() = when (status?.lowercase()) {
         "ongoing" -> SManga.ONGOING
         "completed" -> SManga.COMPLETED
         "hiatus" -> SManga.ON_HIATUS
-        "dropped" -> SManga.CANCELLED
+        "dropped", "axed" -> SManga.CANCELLED
         else -> SManga.UNKNOWN
     }
 }
