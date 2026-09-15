@@ -43,8 +43,6 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     private val apiUrl = "https://api.shngm.io"
 
-    private val cdnUrl = "https://storage.shngm.id"
-
     override val lang = "id"
 
     override val supportsLatest = true
@@ -263,7 +261,7 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
             if (imageName.startsWith("999-")) {
                 null
             } else {
-                Page(index = index, imageUrl = "$cdnUrl${result.pageList.chapterPage.path}$imageName")
+                Page(index = index, imageUrl = "${result.pageList.baseUrl}${result.pageList.chapterPage.path}$imageName")
             }
         }
     }

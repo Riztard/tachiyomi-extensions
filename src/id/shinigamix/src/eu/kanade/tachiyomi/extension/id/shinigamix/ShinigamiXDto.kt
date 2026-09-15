@@ -62,6 +62,7 @@ data class ShinigamiXPageListDto(
 
 @Serializable
 data class ShinigamiXPagesDataDto(
+    @SerialName("base_url") val baseUrl: String,
     @SerialName("chapter") val chapterPage: ShinigamiXPagesData2Dto,
 )
 
