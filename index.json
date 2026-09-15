@@ -360,26 +360,6 @@
     ]
   },
   {
-    "name": "Tachiyomi: Setsu Scans",
-    "pkg": "eu.kanade.tachiyomi.extension.en.setsuscans",
-    "apk": "tachiyomi-en.setsuscans-v1.4.38.apk",
-    "lang": "en",
-    "code": 38,
-    "version": "1.4.38",
-    "nsfw": 0,
-    "hasReadme": 0,
-    "hasChangelog": 0,
-    "sources": [
-      {
-        "name": "Setsu Scans",
-        "lang": "en",
-        "id": "8546397272954539389",
-        "baseUrl": "https://setsuscans.com",
-        "versionId": 1
-      }
-    ]
-  },
-  {
     "name": "Tachiyomi: Shinigami X",
     "pkg": "eu.kanade.tachiyomi.extension.id.shinigamix",
     "apk": "tachiyomi-id.shinigamix-v1.4.17.apk",
