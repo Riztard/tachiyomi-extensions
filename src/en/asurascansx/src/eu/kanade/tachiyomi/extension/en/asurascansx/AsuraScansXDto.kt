@@ -46,6 +46,7 @@ class MangaDto(
     private val author: String? = null,
     private val artist: String? = null,
     private val description: String? = null,
+    private val type: String? = null,
     private val genres: List<GenreDto>? = null,
     private val status: String? = null,
 ) {
@@ -61,7 +62,10 @@ class MangaDto(
         author = this@MangaDto.author
         artist = this@MangaDto.artist
         description = this@MangaDto.description?.let { Jsoup.parseBodyFragment(it) }?.text()
-        genre = genres?.joinToString { it.name }
+        genre = buildList {
+            type?.replaceFirstChar { it.uppercase() }?.let { add(it) }
+            genres?.map { it.name }?.let { addAll(it) }
+        }.joinToString()
         status = parseStatus()
     }
 
