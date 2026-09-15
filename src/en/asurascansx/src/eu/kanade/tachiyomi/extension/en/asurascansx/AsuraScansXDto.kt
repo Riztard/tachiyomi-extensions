@@ -4,10 +4,13 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 import org.jsoup.Jsoup
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.runCatching
 
 private fun SimpleDateFormat.tryParse(date: String?): Long {
     return try {
@@ -90,9 +93,21 @@ class ChapterDto(
     private val number: Float,
     private val title: String? = null,
     @SerialName("created_at") private val createdAt: String = "",
-    @SerialName("is_locked") val isLocked: Boolean = false,
+    @SerialName("is_premium")
+    @JsonNames("is_locked")
+    private val isPremium: Boolean = false,
+    @SerialName("early_access_until")
+    private val earlyAccessUntil: String? = null,
     @SerialName("series_slug") private val seriesSlug: String? = null,
 ) {
+    val isLocked: Boolean
+        get() {
+            if (isPremium) return true
+            val until = earlyAccessUntil ?: return false
+            return runCatching {
+                Instant.parse(until).toEpochMilli() > System.currentTimeMillis()
+            }.getOrDefault(false)
+        }
     fun toSChapter() = SChapter.create().apply {
         val numberStr = number.toString().removeSuffix(".0")
         url = "/series/$seriesSlug/chapter/$numberStr"
