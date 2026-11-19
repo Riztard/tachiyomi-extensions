@@ -41,7 +41,7 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     private var defaultBaseUrl = "https://11.shinigami.asia"
 
-    private val apiUrl = "https://api.shngm.io"
+    private val apiUrl = "https://api.shinigami.io"
 
     override val lang = "id"
 
@@ -118,10 +118,14 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         .add("Sec-GPC", "1")
         .add("User-Agent", userAgent)
 
+    private val pageSize = 30
+
+    private fun pageOffset(page: Int): Int = (page - 1) * pageSize
+
     override fun popularMangaRequest(page: Int): Request {
         val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
-            .addQueryParameter("page", page.toString())
-            .addQueryParameter("page_size", "30")
+            .addQueryParameter("limit", pageSize.toString())
+            .addQueryParameter("offset", pageOffset(page).toString())
             .addQueryParameter("sort", "popularity")
             .build()
 
@@ -132,7 +136,11 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         val rootObject = response.parseAs<ShinigamiXBrowseDto>()
         val projectList = rootObject.data.map(::popularMangaFromObject)
 
-        val hasNextPage = rootObject.meta.totalPage?.let { rootObject.meta.page < it } ?: false
+        val hasNextPage = rootObject.meta.hasNext
+            ?: rootObject.meta.totalPage?.let { total ->
+                (rootObject.meta.page ?: 1) < total
+            }
+            ?: false
 
         return MangasPage(projectList, hasNextPage)
     }
@@ -145,8 +153,8 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     override fun latestUpdatesRequest(page: Int): Request {
         val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
-            .addQueryParameter("page", page.toString())
-            .addQueryParameter("page_size", "30")
+            .addQueryParameter("limit", pageSize.toString())
+            .addQueryParameter("offset", pageOffset(page).toString())
             .addQueryParameter("sort", "latest")
             .build()
 
@@ -157,8 +165,8 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val url = "$apiUrl/v1/manga/list".toHttpUrl().newBuilder()
-            .addQueryParameter("page", page.toString())
-            .addQueryParameter("page_size", "30")
+            .addQueryParameter("limit", pageSize.toString())
+            .addQueryParameter("offset", pageOffset(page).toString())
 
         if (query.isNotEmpty()) {
             url.addQueryParameter("q", query)

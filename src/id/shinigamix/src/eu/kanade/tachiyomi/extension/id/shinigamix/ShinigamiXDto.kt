@@ -18,8 +18,11 @@ data class ShinigamiXBrowseDataDto(
 
 @Serializable
 data class MetaDto(
-    val page: Int,
+    val page: Int? = null,
     @SerialName("total_page") val totalPage: Int? = null,
+    @SerialName("has_next") val hasNext: Boolean? = null,
+    val limit: Int? = null,
+    val offset: Int? = null,
 )
 
 @Serializable
