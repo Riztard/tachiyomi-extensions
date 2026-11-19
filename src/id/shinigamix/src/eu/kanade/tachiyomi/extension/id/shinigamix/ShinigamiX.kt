@@ -39,7 +39,7 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     override val baseUrl by lazy { getPrefBaseUrl() }
 
-    private var defaultBaseUrl = "https://app.shinigami.asia"
+    private var defaultBaseUrl = "https://11.shinigami.asia"
 
     private val apiUrl = "https://api.shngm.io"
 
@@ -215,17 +215,15 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
         }
     }
 
-    private val random = Random.Default
+    override fun getChapterUrl(chapter: SChapter): String = "$baseUrl/chapter/${chapter.url}"
 
     override fun chapterListRequest(manga: SManga): Request {
-        val randomPageSize = random.nextInt(2000, 9000)
-
         if (manga.url.contains("v1/manga/detail")) {
             manga.url = manga.url.substringAfter("manga/detail/")
         }
 
         return GET(
-            "$apiUrl/v1/chapter/${manga.url}/list?page_size=$randomPageSize",
+            "$apiUrl/v1/chapter/${manga.url}/list?page_size=3000",
             apiHeaders,
         )
     }
