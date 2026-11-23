@@ -225,21 +225,41 @@ class ShinigamiX : ConfigurableSource, HttpSource() {
 
     override fun getChapterUrl(chapter: SChapter): String = "$baseUrl/chapter/${chapter.url}"
 
+    private var currentMangaId: String? = null
+
     override fun chapterListRequest(manga: SManga): Request {
         if (manga.url.contains("v1/manga/detail")) {
             manga.url = manga.url.substringAfter("manga/detail/")
         }
-
+        currentMangaId = manga.url
         return GET(
-            "$apiUrl/v1/chapter/${manga.url}/list?page_size=3000",
+            "$apiUrl/v1/chapter/${manga.url}/list?limit=500",
             apiHeaders,
         )
     }
 
     override fun chapterListParse(response: Response): List<SChapter> {
-        val result = response.parseAs<ShinigamiXChapterListDto>()
+        val allChapters = mutableListOf<ShinigamiXChapterListDataDto>()
+        var currentResponse: Response? = response
 
-        return result.chapterList.map(::chapterFromObject)
+        while (currentResponse != null) {
+            val result = currentResponse.parseAs<ShinigamiXChapterListDto>()
+            allChapters.addAll(result.chapterList)
+
+            val nextCursor = result.meta.nextCursor
+            currentResponse = if (result.meta.hasNext == true && nextCursor != null) {
+                client.newCall(
+                    GET(
+                        "$apiUrl/v1/chapter/$currentMangaId/list?limit=500&cursor=$nextCursor",
+                        apiHeaders,
+                    ),
+                ).execute()
+            } else {
+                null
+            }
+        }
+
+        return allChapters.map(::chapterFromObject)
     }
 
     private fun chapterFromObject(obj: ShinigamiXChapterListDataDto): SChapter = SChapter.create().apply {

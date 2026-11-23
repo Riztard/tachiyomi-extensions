@@ -23,6 +23,7 @@ data class MetaDto(
     @SerialName("has_next") val hasNext: Boolean? = null,
     val limit: Int? = null,
     val offset: Int? = null,
+    @SerialName("next_cursor") val nextCursor: String? = null,
 )
 
 @Serializable
